@@ -13,7 +13,7 @@ def detection_to_bbox(img, det):
     return out
 
 
-class TorchDataset(torch.utils.data.Dataset):
+class TorchFiftyOneDataset(torch.utils.data.Dataset):
     def __init__(self, fo_ds, trans=None):
         self.fo_ds = fo_ds
         self.trans = trans

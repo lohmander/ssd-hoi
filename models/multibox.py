@@ -1,6 +1,6 @@
 import torch
 import torch.nn as nn
-import utils
+import sshoid.utils as utils
 
 
 class MultiboxLoss(nn.Module):
