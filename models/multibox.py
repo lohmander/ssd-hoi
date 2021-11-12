@@ -22,19 +22,19 @@ class MultiboxLoss(nn.Module):
 
         assert n_priors == yhat_locs.size(1) == yhat_clss.size(1), (n_priors, yhat_locs.shape, yhat_clss.shape)
 
-        true_locs = torch.zeros((batch_size, n_priors, 4), dtype=torch.float).to(device)
-        true_clss = torch.zeros((batch_size, n_priors), dtype=torch.long).to(device)
+        true_locs = torch.zeros((batch_size, n_priors, 4), dtype=torch.float)
+        true_clss = torch.zeros((batch_size, n_priors), dtype=torch.long)
 
         for i in range(batch_size):
             n_objs = y_locs[i].size(0)
-            overlap = find_iou(y_locs[i], self.priors_xy)
+            overlap = utils.find_iou(y_locs[i], self.priors_xy)
             overlap_per_prior, object_per_prior = overlap.max(dim=0)
 
             # We don't want a situation where an object is not represented in our positive (non-background) priors -
             # 1. An object might not be the best object for all priors, and is therefore not in object_for_each_prior.
             # 2. All priors with the object may be assigned as background based on the threshold (0.5)
             _, prior_per_object = overlap.max(dim=1)
-            object_per_prior[prior_per_object] = torch.LongTensor(range(n_objs)).to(device)
+            object_per_prior[prior_per_object] = torch.LongTensor(range(n_objs))
             overlap_per_prior[prior_per_object] = 1.
 
             cls_per_prior = y_clss[i][object_per_prior] 
@@ -89,7 +89,7 @@ class MultiboxLoss(nn.Module):
         conf_loss_neg[pos_priors] = 0.
         conf_loss_neg, _ = conf_loss_neg.sort(dim=1, descending=True)
 
-        hardness_ranks = torch.LongTensor(range(n_priors)).unsqueeze(0).expand_as(conf_loss_neg).to(device)
+        hardness_ranks = torch.LongTensor(range(n_priors)).unsqueeze(0).expand_as(conf_loss_neg)
         hard_neg = hardness_ranks < n_hard_neg.unsqueeze(1)
 
         conf_loss_hard_neg = conf_loss_neg[hard_neg]

@@ -1,5 +1,6 @@
 import torch
-
+import torchvision as tv
+from torchvision.io import read_image
 
 def detection_to_bbox(img, det):
     bbox = det.bounding_box
@@ -42,11 +43,11 @@ class TorchFiftyOneDataset(torch.utils.data.Dataset):
             clss.append(self.cls_to_idx[det.label])
         
         y = {
-            "bboxes": torch.FloatTensor(bboxes).to(device),
-            "clss": torch.LongTensor(clss).to(device),
+            "bboxes": torch.FloatTensor(bboxes),
+            "clss": torch.LongTensor(clss),
         }
         
-        return img.to(device), y
+        return img, y
     
     def __len__(self):
         return len(self.file_paths)

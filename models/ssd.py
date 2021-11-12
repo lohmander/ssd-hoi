@@ -2,7 +2,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torchvision as tv
+import sshoid.utils as utils
 from dataclasses import dataclass
+from math import sqrt
 
 
 @dataclass
@@ -19,6 +21,7 @@ class BaseConv(nn.Module):
     def __init__(self):
         super().__init__()
 
+        global VGG16
         VGG16 = tv.models.vgg16(pretrained=True)
 
         # We extract two feature maps from the base module, the first
@@ -46,13 +49,13 @@ class BaseConv(nn.Module):
 
         conv_fc6_weight = classifier_state_dict['0.weight'].view(4096, 512, 7, 7)
         conv_fc6_bias = classifier_state_dict['0.bias']
-        state_dict['conv_features_fc1.weight'] = decimate(conv_fc6_weight, m=[4, None, 3, 3]) # (1024, 512, 3, 3)
-        state_dict['conv_features_fc1.bias'] = decimate(conv_fc6_bias, m=[4])  # (1024)
+        state_dict['conv_features_fc1.weight'] = utils.decimate(conv_fc6_weight, m=[4, None, 3, 3]) # (1024, 512, 3, 3)
+        state_dict['conv_features_fc1.bias'] = utils.decimate(conv_fc6_bias, m=[4])  # (1024)
 
         conv_fc7_weight = classifier_state_dict['3.weight'].view(4096, 4096, 1, 1)
         conv_fc7_bias = classifier_state_dict['3.bias']
-        state_dict['conv_features_fc2.weight'] = decimate(conv_fc7_weight, m=[4, 4, None, None]) # (1024, 1024, 1, 1)
-        state_dict['conv_features_fc2.bias'] = decimate(conv_fc7_bias, m=[4]) # (1024
+        state_dict['conv_features_fc2.weight'] = utils.decimate(conv_fc7_weight, m=[4, 4, None, None]) # (1024, 1024, 1, 1)
+        state_dict['conv_features_fc2.bias'] = utils.decimate(conv_fc7_bias, m=[4]) # (1024
 
         self.load_state_dict(state_dict)
     
@@ -185,8 +188,14 @@ class PredConv(nn.Module):
 
 
 class SSD(nn.Module):
-    def __init__(self, n_cls):
+    def __init__(self, n_cls, set_device=None):
         super().__init__()
+
+        global device
+        device = torch.device("cpu")
+
+        if set_device:
+            device = set_device
 
         self.n_cls = n_cls
 
