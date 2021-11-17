@@ -14,7 +14,20 @@ class MultiboxLoss(nn.Module):
         self.alpha = alpha
         self.smooth_l1 = nn.L1Loss()
         self.crossentropy = nn.CrossEntropyLoss(reduction='none')
-    
+
+    def to(self, *args, **kwargs):
+        self = super().to(*args, **kwargs) 
+        self.priors_cxcy = self.priors_cxcy.to(*args, **kwargs) 
+        self.priors_xy = self.priors_xy.to(*args, **kwargs) 
+        self._device = args[0]
+        print("set loss device", args[0])
+        return self
+
+    @property
+    def device(self):
+        return torch.device("cuda:0")
+        # return self._device or next(self.parameters()).device
+
     def forward(self, yhat_locs, yhat_clss, y_locs, y_clss):
         batch_size = yhat_locs.size(0)
         n_priors = self.priors_xy.size(0)
@@ -22,8 +35,8 @@ class MultiboxLoss(nn.Module):
 
         assert n_priors == yhat_locs.size(1) == yhat_clss.size(1), (n_priors, yhat_locs.shape, yhat_clss.shape)
 
-        true_locs = torch.zeros((batch_size, n_priors, 4), dtype=torch.float)
-        true_clss = torch.zeros((batch_size, n_priors), dtype=torch.long)
+        true_locs = torch.zeros((batch_size, n_priors, 4), dtype=torch.float).to(self.device)
+        true_clss = torch.zeros((batch_size, n_priors), dtype=torch.long).to(self.device)
 
         for i in range(batch_size):
             n_objs = y_locs[i].size(0)
@@ -34,7 +47,7 @@ class MultiboxLoss(nn.Module):
             # 1. An object might not be the best object for all priors, and is therefore not in object_for_each_prior.
             # 2. All priors with the object may be assigned as background based on the threshold (0.5)
             _, prior_per_object = overlap.max(dim=1)
-            object_per_prior[prior_per_object] = torch.LongTensor(range(n_objs))
+            object_per_prior[prior_per_object] = torch.LongTensor(range(n_objs)).to(self.device)
             overlap_per_prior[prior_per_object] = 1.
 
             cls_per_prior = y_clss[i][object_per_prior] 
@@ -89,7 +102,7 @@ class MultiboxLoss(nn.Module):
         conf_loss_neg[pos_priors] = 0.
         conf_loss_neg, _ = conf_loss_neg.sort(dim=1, descending=True)
 
-        hardness_ranks = torch.LongTensor(range(n_priors)).unsqueeze(0).expand_as(conf_loss_neg)
+        hardness_ranks = torch.LongTensor(range(n_priors)).unsqueeze(0).expand_as(conf_loss_neg).to(self.device)
         hard_neg = hardness_ranks < n_hard_neg.unsqueeze(1)
 
         conf_loss_hard_neg = conf_loss_neg[hard_neg]

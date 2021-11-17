@@ -188,17 +188,10 @@ class PredConv(nn.Module):
 
 
 class SSD(nn.Module):
-    def __init__(self, n_cls, set_device=None):
+    def __init__(self, n_cls):
         super().__init__()
 
-        global device
-        device = torch.device("cpu")
-
-        if set_device:
-            device = set_device
-
         self.n_cls = n_cls
-
         self.base_conv = BaseConv()
         self.aux_conv = AuxConv()
         self.pred_conv = PredConv(n_cls)
@@ -209,6 +202,10 @@ class SSD(nn.Module):
 
         self.priors = self.create_prior_bboxes()
 
+    def to(self, *args, **kwargs):
+        self = super().to(*args, **kwargs) 
+        self.priors = self.priors.to(*args, **kwargs) 
+        return self
 
     def init_weights(self):
         # We initialize the rescale factor with 20, which is somewhat arbitrary, but 
@@ -267,7 +264,7 @@ class SSD(nn.Module):
                             
                             priors.append([cx, cy, add_scale, add_scale])
         
-        return torch.FloatTensor(priors).to(device).clamp(0, 1)
+        return torch.FloatTensor(priors).clamp(0, 1)
     
     def forward(self, img):
         fmap_1, fmap_2 = self.base_conv(img)
@@ -340,14 +337,14 @@ class SSD(nn.Module):
                     suppress[box] = 0 
 
                 bboxes.append(cls_locs[1 - suppress])
-                labels.append(torch.LongTensor((1 - suppress).sum().item() * [cls]).to(device))
+                labels.append(torch.LongTensor((1 - suppress).sum().item() * [cls]).to(self.device))
                 scores.append(cls_scores[1 - suppress])
 
             # If nothing is detected, add a background class
             if not bboxes:
-                bboxes.append(torch.FloatTensor([[0., 0., 1., 1.]]).to(device))
-                labels.append(torch.LongTensor([0]).to(device))
-                scores.append(torch.FloatTensor([0.]).to(device))
+                bboxes.append(torch.FloatTensor([[0., 0., 1., 1.]]).to(self.device))
+                labels.append(torch.LongTensor([0]).to(self.device))
+                scores.append(torch.FloatTensor([0.]).to(self.device))
             
             # Concat into single tensors
             bboxes = torch.cat(bboxes, dim=0)
