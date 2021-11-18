@@ -290,8 +290,8 @@ class SSD(nn.Module):
         assert n_priors == locs.size(1)
 
         for i in range(batch_size):
-            decoded_locs = cxcy_to_xy(
-                gcxgcy_to_cxcy(locs[i], self.priors)
+            decoded_locs = utils.cxcy_to_xy(
+                utils.gcxgcy_to_cxcy(locs[i], self.priors)
             )
 
             bboxes = []
@@ -323,8 +323,8 @@ class SSD(nn.Module):
                 cls_locs = cls_locs[sort_idx]
 
                 # Find all the overlaps between bboxes
-                overlap = find_iou(cls_locs, cls_locs)
-                suppress = torch.zeros((n_above_min_scores,), dtype=torch.uint8).to(device)
+                overlap = utils.find_iou(cls_locs, cls_locs)
+                suppress = torch.zeros((n_above_min_scores,), dtype=torch.uint8).to(self.device)
 
                 for box in range(cls_locs.size(0)):
                     # Skip if already marked for suppression?
